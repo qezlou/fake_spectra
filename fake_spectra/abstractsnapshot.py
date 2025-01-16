@@ -334,7 +334,7 @@ class BigFileSnapshot(AbstractSnapshot):
         except bigfile.BigFileError:
             raise KeyError("Not found:"+str(part_type)+"/"+blockname)
 
-    def get_n_segments(self, part_type, chunk_size = 256.**3):
+    def get_n_segments(self, part_type=0, chunk_size = 256.**3):
         """Distribute particles among ranks. Also, break the load on each rank into segments containing
         chunk_size particles and return number of these segments for each rank""" 
         #Store number of particles on each rank in an array
