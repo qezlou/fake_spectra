@@ -153,6 +153,7 @@ class Spectra:
             else:
                 raise ValueError("Unrecognised kernel %d" % kernel)
         except IOError:
+            self.snapshot_set = None
             pass
         if savedir is None:
             #Use snapdir if exists, otherwise use SPEC_
@@ -178,8 +179,8 @@ class Spectra:
             try:
                 self.npart = self.snapshot_set.get_npart()
                 #If we got here without a snapshot_set, we really have an IOError
-            except AttributeError as ae:
-                raise IOError("Unable to load snapshot ", num, base) from ae
+            except Exception as e:
+                raise IOError("Unable to load snapshot ", num, base) from e
             self.box = self.snapshot_set.get_header_attr("BoxSize")
             self.atime = self.snapshot_set.get_header_attr("Time")
             self.red = 1/self.atime - 1.
@@ -251,20 +252,21 @@ class Spectra:
         #Line data
         self.lines = line_data.LineData()
         #Load the class for computing gas properties such as temperature from the raw simulation.
-        if gasprop is None:
+        if self.snapshot_set is not None:
+            if gasprop is None:
+                try:
+                    self.snapshot_set.get_data(0, "NeutralHydrogenFraction")
+                    gasprop = gas_properties.GasProperties
+                except :
+                    gasprop = ratenetworkspectra.RateNetworkGas
             try:
-                self.snapshot_set.get_data(0, "NeutralHydrogenFraction")
-                gasprop = gas_properties.GasProperties
-            except KeyError:
-                gasprop = ratenetworkspectra.RateNetworkGas
-        try:
-            gprop_args = {"redshift" : self.red, "absnap" : self.snapshot_set, "hubble": self.hubble, "units": self.units, "sf_neutral": sf_neutral}
-            if gasprop_args is not None:
-                gprop_args.update(gasprop_args)
-            self.gasprop = gasprop(**gprop_args)
-        except AttributeError:
-            #Occurs if we didn't load a snapshot
-            pass
+                gprop_args = {"redshift" : self.red, "absnap" : self.snapshot_set, "hubble": self.hubble, "units": self.units, "sf_neutral": sf_neutral}
+                if gasprop_args is not None:
+                    gprop_args.update(gasprop_args)
+                self.gasprop = gasprop(**gprop_args)
+            except AttributeError:
+                #Occurs if we didn't load a snapshot
+                pass
         if not quiet:
             print(self.NumLos, " sightlines. resolution: ", self.dvbin, " z=", self.red)
 
