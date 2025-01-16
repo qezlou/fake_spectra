@@ -32,6 +32,7 @@ from . import unitsystem
 from . import voigtfit
 from . import spec_utils
 from . import fluxstatistics as fstat
+from . import ratenetworkspectra
 from ._spectra_priv import _Particle_Interpolate, _near_lines
 
 from .cloudy_tables import convert_cloudy
@@ -251,7 +252,11 @@ class Spectra:
         self.lines = line_data.LineData()
         #Load the class for computing gas properties such as temperature from the raw simulation.
         if gasprop is None:
-            gasprop = gas_properties.GasProperties
+            try:
+                self.snapshot_set.get_data(0, "NeutralHydrogenFraction")
+                gasprop = gas_properties.GasProperties
+            except KeyError:
+                gasprop = ratenetworkspectra.RateNetworkGas
         try:
             gprop_args = {"redshift" : self.red, "absnap" : self.snapshot_set, "hubble": self.hubble, "units": self.units, "sf_neutral": sf_neutral}
             if gasprop_args is not None:
